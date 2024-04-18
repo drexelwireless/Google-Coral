@@ -10,5 +10,5 @@
     camera streams, but OpenCV was found to perform the best during testing.
 
 
-`opencv-detection-print-cont.py`
+`opencv-detection-print-cont.py`  
     Similar to above, but continuously detects objects.
