@@ -19,11 +19,13 @@ Syntax:
 from socket import *
 # Terminates the program and gets command line arguments
 import sys
+import os
+import io
 # Parsing and creating JSONs
 import json
 from subprocess import run
 
-detect_script = "/home/mendel/coral/examples-camera/opencv/detect-print.py"
+detect_script = "/home/mendel/coral/examples-camera/opencv/detect-print-cont.py"
 
 
 def print_frame(buf):
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     server_host = ""
     server_port = -1
 
-# FIXME: check if server_host is valid
+    # FIXME: check if server_host is valid
     server_host = sys.argv[1]
 
     # Check if port number is valid
@@ -57,39 +59,41 @@ if __name__ == "__main__":
     print("Congrats! You passed all the command line argument checks c:")
     sys.exit()
     """
-    
-    with socket(AF_INET, SOCK_STREAM) as s:
-        # Create connection
-        s.connect((server_host, server_port))
 
-        # run program
+    # create pipe
+    rFD, wFD = os.pipe()
+    inheritable = True
+    os.set_inheritable(wFD, inheritable)
+
+    pid = os.fork()
+
+    if pid == -1: # fork error
+        print("ERROR -- could not create child process")
+        sys.exit()
+    elif pid == 0: # parent
+        # FIXME: establish socket connection, 
+        #           read info from child through pipe,
+        #           send info over socket
+        os.close(wFD)
+        print("Parent:")
+
+        rFL = os.fdopen(rFD)
+        n = 0
         while True:
-            result = run(args=["python3", detect_script], text=True, 
-                        capture_output=True)
-            result_lines = result.stdout.split("\n")[1:]
-            print(result.stderr)
-            frame = {}
-            f = {}
-            l = []
-            i = 1
-            for line in result_lines:
-                print(line)
-                if line == "":
-                    continue
-                s1 = line.split(":")
-                label = s1[0].strip()
-                s2 = s1[1].split(",")
-                score = s2[1].strip()
-                f["Object Detected " + str(i)] = label
-                f["Score " +str(i)] = score
-                i += 1
-            l.append(f)
-            frame["frame"] = l
-            print(frame)
+            line = rFL.readline()[:-1]
+            print(line[0])
+    else: # child
+        os.close(rFD)
+        # Run detection script once,
+        # send info from it through pipe to parent
+        # Change FDs to have output go to pipe
+        newOUT = os.dup2(sys.stdout.fileno(), wFD)
 
-            json_frame = json.dumps(frame)
-            s.sendall(json_frame.encode())
-
+        # Using `execvp(FILE, ARGS)` where FILE is the name of the command to
+        # run and ARGS is a tuple of the arguments the command needs
+        args = ("python3", detect_script)
+        os.execvp("python3", args)
+        #os.write(wFD, b'Hello, world!')
 
 
     # exit
