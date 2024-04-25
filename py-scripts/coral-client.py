@@ -19,6 +19,7 @@ Syntax:
 from socket import *
 # Terminates the program and gets command line arguments
 import sys
+import datetime
 # Parsing and creating JSONs
 import json
 from subprocess import run
@@ -57,13 +58,26 @@ if __name__ == "__main__":
     print("Congrats! You passed all the command line argument checks c:")
     sys.exit()
     """
+
+    start = datetime.datetime.now()
+
+    n_max = 100
+    n = 0
+
     
     with socket(AF_INET, SOCK_STREAM) as s:
         # Create connection
         s.connect((server_host, server_port))
 
+        stop = datetime.datetime.now()
+        print("Setup Time:", stop-start,"s")
+
+        start = datetime.datetime.now()
+
         # run program
         while True:
+            if n > n_max:
+                break
             result = run(args=["python3", detect_script], text=True, 
                         capture_output=True)
             result_lines = result.stdout.split("\n")[1:]
@@ -89,6 +103,12 @@ if __name__ == "__main__":
 
             json_frame = json.dumps(frame)
             s.sendall(json_frame.encode())
+            
+            n += 1
+
+        stop = datetime.datetime.now()
+        print("Send Time of 100 Frames:", stop-start, "s")
+        print("Frame Detections sent per second:", (stop-start)/100)
 
 
 

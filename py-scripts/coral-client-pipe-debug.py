@@ -21,6 +21,7 @@ from socket import *
 import sys
 import os
 import io
+import datetime
 # Parsing and creating JSONs
 import json
 from subprocess import run
@@ -60,6 +61,8 @@ if __name__ == "__main__":
     sys.exit()
     """
 
+    start = datetime.datetime.now()
+
     # create pipe
     rFD, wFD = os.pipe()
     inheritable = True
@@ -71,23 +74,23 @@ if __name__ == "__main__":
         print("ERROR -- could not create child process")
         sys.exit()
     elif pid == 0: # parent
+        stop = datetime.datetime.now()
+        print("Setup Time:", stop-start, "s")
         # FIXME: establish socket connection, 
         #           read info from child through pipe,
         #           send info over socket
         os.close(wFD)
-        print("Parent:")
-
         rFL = os.fdopen(rFD)
-        n = 0
         while True:
             line = rFL.readline()[:-1]
-            print(line[0])
+            if len(line) > 0:
+                print(line[0])
     else: # child
         os.close(rFD)
         # Run detection script once,
         # send info from it through pipe to parent
         # Change FDs to have output go to pipe
-        newOUT = os.dup2(sys.stdout.fileno(), wFD)
+        newOUT = os.dup2(wFD, sys.stdout.fileno())
 
         # Using `execvp(FILE, ARGS)` where FILE is the name of the command to
         # run and ARGS is a tuple of the arguments the command needs
